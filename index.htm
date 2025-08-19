@@ -67,7 +67,7 @@
          const SPREADSHEET_ID = '1c1apbtJlCRhOxExVaP_vvGw0Q39Fztxa2dTy7lgODRo';
         
         const API_KEY = 'AIzaSyCLTjPgKkq3Td-IsnPuNxsCI0vrEEou6-s'; 
-        const RANGE = 'Sheet1!A2:F'; // This range (A2:F) assumes your data starts in row 2
+        const RANGE = 'Sheet1!A2:X'; // This range (A2:F) assumes your data starts in row 2
 
         // Global state for our fruit data and editing status
         let fruits = [];
@@ -108,7 +108,7 @@
                 showNotification('✅ Data loaded successfully!');
             } catch (error) {
                 console.error('Error fetching data from Google Sheets:', error);
-                showNotification('❌ Failed to load data. Check your API key and sheet ID.', 'error');
+               // showNotification('❌ Failed to load data. Check your API key and sheet ID.', 'error');
             }
         }
         
