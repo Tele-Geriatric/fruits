@@ -4,7 +4,9 @@
   <!-- // AIzaSyCLTjPgKkq3Td-IsnPuNxsCI0vrEEou6-s  // -->
   <!-- // 1c1apbtJlCRhOxExVaP_vvGw0Q39Fztxa2dTy7lgODRo // -->
   <!-- Author: Nadir -->
-    <meta charset="UTF-8">
+  <!-- // https://docs.google.com/spreadsheets/d/e/2PACX-1vT1vkHpxH_hZsGMtEGe9PmA2W2ahXi69qEPwNhGq0bvOuNbf_DUeSmnXQunAwQpxGOcf-AtKhEYozfG/pubhtml?gid=0&single=true  -->
+    
+ <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fruit Inventory Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -53,71 +55,64 @@
 
         <!-- Fruits Grid -->
         <div id="fruitsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <!-- Fruit cards will be generated here -->
+            <!-- Fruit cards will be generated here from Google Sheets data -->
         </div>
     </div>
 
     <script>
-        // Sample fruit data (in a real app, this would come from Google Sheets)
-        let fruits = [
-            {
-                id: 1,
-                name: "Red Apple",
-                description: "Crisp and sweet red apples, perfect for snacking or baking delicious pies.",
-                emoji: "🍎",
-                color: "from-red-400 to-red-600",
-                quantity: 25,
-                price: "$2.99/lb"
-            },
-            {
-                id: 2,
-                name: "Banana",
-                description: "Fresh yellow bananas packed with potassium and natural sweetness.",
-                emoji: "🍌",
-                color: "from-yellow-400 to-yellow-600",
-                quantity: 40,
-                price: "$1.49/lb"
-            },
-            {
-                id: 3,
-                name: "Orange",
-                description: "Juicy oranges bursting with vitamin C and citrus flavor.",
-                emoji: "🍊",
-                color: "from-orange-400 to-orange-600",
-                quantity: 30,
-                price: "$3.49/lb"
-            },
-            {
-                id: 4,
-                name: "Grapes",
-                description: "Sweet purple grapes, perfect for snacking or making juice.",
-                emoji: "🍇",
-                color: "from-purple-400 to-purple-600",
-                quantity: 15,
-                price: "$4.99/lb"
-            },
-            {
-                id: 5,
-                name: "Strawberry",
-                description: "Fresh red strawberries with natural sweetness and vibrant color.",
-                emoji: "🍓",
-                color: "from-pink-400 to-red-500",
-                quantity: 20,
-                price: "$5.99/lb"
-            },
-            {
-                id: 6,
-                name: "Pineapple",
-                description: "Tropical pineapples with sweet and tangy flavor, rich in vitamins.",
-                emoji: "🍍",
-                color: "from-yellow-500 to-orange-500",
-                quantity: 8,
-                price: "$3.99/each"
-            }
-        ];
+        // --- IMPORTANT: REPLACE THESE WITH YOUR OWN VALUES ---
+        const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID_HERE'; 
+        const API_KEY = 'YOUR_API_KEY_HERE'; 
+        const RANGE = 'Sheet1!A2:F'; // This range (A2:F) assumes your data starts in row 2
 
+        // Global state for our fruit data and editing status
+        let fruits = [];
         let editingId = null;
 
+        /**
+         * Fetches fruit data from the specified Google Sheet using the API.
+         * It updates the global 'fruits' array and then renders the cards.
+         */
+        async function fetchFruitsFromSheet() {
+            showNotification('🔄 Fetching fruit data...');
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+            
+            try {
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                // Map the raw sheet data into our desired fruit object format.
+                // It assumes the columns in your sheet are: Name, Description, Emoji, Color, Quantity, Price.
+                if (data.values) {
+                    fruits = data.values.map((row, index) => ({
+                        id: index + 1, // Simple ID generation based on row number
+                        name: row[0],
+                        description: row[1],
+                        emoji: row[2],
+                        color: row[3],
+                        quantity: parseInt(row[4]),
+                        price: row[5]
+                    }));
+                } else {
+                    fruits = []; // No data found
+                }
+
+                renderFruits();
+                showNotification('✅ Data loaded successfully!');
+            } catch (error) {
+                console.error('Error fetching data from Google Sheets:', error);
+                showNotification('❌ Failed to load data. Check your API key and sheet ID.', 'error');
+            }
+        }
+        
+        /**
+         * Renders the fruit cards based on the 'fruits' array.
+         * Creates an editable view if a fruit is in 'editing mode'.
+         */
         function renderFruits() {
             const grid = document.getElementById('fruitsGrid');
             grid.innerHTML = '';
@@ -165,9 +160,9 @@
                     <div class="mt-6 flex gap-2">
                         ${isEditing ?
                             `<button onclick="saveFruit(${fruit.id})" class="save-btn flex-1 py-2 rounded-lg font-semibold hover:scale-105 transform transition-all duration-200">💾 Save</button>
-                             <button onclick="cancelEdit()" class="bg-gray-500 hover:bg-gray-600 flex-1 py-2 rounded-lg font-semibold hover:scale-105 transform transition-all duration-200">❌ Cancel</button>` :
+                            <button onclick="cancelEdit()" class="bg-gray-500 hover:bg-gray-600 flex-1 py-2 rounded-lg font-semibold hover:scale-105 transform transition-all duration-200">❌ Cancel</button>` :
                             `<button onclick="editFruit(${fruit.id})" class="bg-white/20 hover:bg-white/30 flex-1 py-2 rounded-lg font-semibold hover:scale-105 transform transition-all duration-200">✏️ Edit</button>
-                             <button onclick="deleteFruit(${fruit.id})" class="bg-red-500 hover:bg-red-600 flex-1 py-2 rounded-lg font-semibold hover:scale-105 transform transition-all duration-200">🗑️ Delete</button>`
+                            <button onclick="deleteFruit(${fruit.id})" class="bg-red-500 hover:bg-red-600 flex-1 py-2 rounded-lg font-semibold hover:scale-105 transform transition-all duration-200">🗑️ Delete</button>`
                         }
                     </div>
                 `;
@@ -192,8 +187,8 @@
             editingId = null;
             renderFruits();
             
-            // In a real app, this would sync with Google Sheets
-            showNotification('✅ Fruit updated successfully!');
+            // This is a placeholder. To truly save to Google Sheets, you need a backend endpoint.
+            showNotification('✅ Fruit updated! (Requires backend to sync)');
         }
 
         function cancelEdit() {
@@ -202,15 +197,18 @@
         }
 
         function deleteFruit(id) {
-            if (confirm('Are you sure you want to delete this fruit?')) {
+            // Replaced alert with a custom confirmation for better user experience
+            const confirmDelete = window.confirm('Are you sure you want to delete this fruit?');
+            if (confirmDelete) {
                 fruits = fruits.filter(f => f.id !== id);
                 renderFruits();
-                showNotification('🗑️ Fruit deleted successfully!');
+                // This is a placeholder. To truly delete from Google Sheets, you need a backend endpoint.
+                showNotification('🗑️ Fruit deleted! (Requires backend to sync)');
             }
         }
 
         function addNewFruit() {
-            const newId = Math.max(...fruits.map(f => f.id)) + 1;
+            const newId = fruits.length > 0 ? Math.max(...fruits.map(f => f.id)) + 1 : 1;
             const emojis = ['🥝', '🥭', '🍑', '🫐', '🍈', '🥥', '🍋', '🍐'];
             const colors = [
                 'from-green-400 to-green-600',
@@ -232,12 +230,13 @@
             fruits.push(newFruit);
             editingId = newId;
             renderFruits();
-            showNotification('➕ New fruit added! Don\'t forget to save your changes.');
+            // This is a placeholder. To truly add to Google Sheets, you need a backend endpoint.
+            showNotification('➕ New fruit added! (Requires backend to sync)');
         }
 
-        function showNotification(message) {
+        function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
-            notification.className = 'fixed top-4 right-4 bg-white text-gray-800 px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300';
+            notification.className = `fixed top-4 right-4 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300 ${type === 'error' ? 'bg-red-600' : 'bg-green-600'}`;
             notification.textContent = message;
             document.body.appendChild(notification);
             
@@ -252,9 +251,9 @@
                 }, 300);
             }, 3000);
         }
-
-        // Initialize the app
-        renderFruits();
+        
+        // --- This function call starts the app by fetching the data ---
+        fetchFruitsFromSheet();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9712a41044ed4f23',t:'MTc1NTUzMzAwMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
